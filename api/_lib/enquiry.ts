@@ -1,7 +1,17 @@
 import { Resend } from "resend";
-import { PREFERRED_TIMES, SERVICES, normalizeIndianPhone } from "../../src/lib/form.ts";
 
-export { PREFERRED_TIMES, SERVICES };
+export const SERVICES = [
+  "Sofa Repair & Reupholstery",
+  "Custom Furniture",
+  "Bed Repair & Custom Furnishing",
+  "Mattress Repair & Replacement",
+  "Dining Table & Chair Repair",
+  "Recliner Chair Service",
+  "Curtains & Home Furnishings",
+  "Other",
+] as const;
+
+export const PREFERRED_TIMES = ["Anytime", "Morning", "Afternoon", "Evening"] as const;
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 5;
@@ -21,6 +31,15 @@ export type EnquiryResult = {
   status: number;
   json: { ok: boolean; error?: string };
 };
+
+export function normalizeIndianPhone(raw: string) {
+  const compact = raw.replace(/[^\d+]/g, "");
+  const digits = compact.replace(/\D/g, "");
+  if (/^[6-9]\d{9}$/.test(digits)) return `+91${digits}`;
+  if (/^91[6-9]\d{9}$/.test(digits)) return `+${digits}`;
+  if (/^\+91[6-9]\d{9}$/.test(compact)) return compact;
+  return null;
+}
 
 function prune(ip: string, now: number) {
   const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
@@ -126,7 +145,7 @@ function emailHtml(payload: EnquiryPayload, phone: string) {
 
 export async function handleEnquiry(
   body: unknown,
-  meta: { ip: string },
+  meta: { ip: string; origin?: string },
 ): Promise<EnquiryResult> {
   const payload = parseBody(body);
   if (!payload) {
@@ -149,7 +168,8 @@ export async function handleEnquiry(
 
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL || "info.abhisheksaroj@gmail.com";
-  const from = process.env.CONTACT_FROM_EMAIL || "beth.t@example.com";
+  const fromRaw = process.env.CONTACT_FROM_EMAIL || "onboarding@resend.dev";
+  const from = fromRaw.includes("example.com") ? "onboarding@resend.dev" : fromRaw;
   const phone = normalizeIndianPhone(payload.phone) as string;
   const text = [
     "New website enquiry — MS Sofa Repair & Furnishing",
@@ -162,23 +182,27 @@ export async function handleEnquiry(
   ].join("\n");
 
   if (apiKey) {
-    const resend = new Resend(apiKey);
-    const { error: sendError } = await resend.emails.send({
-      from,
-      to,
-      subject: "New Website Enquiry — MS Sofa Repair & Furnishing",
-      html: emailHtml(payload, phone),
-      text,
-    });
+    try {
+      const resend = new Resend(apiKey);
+      const { error: sendError } = await resend.emails.send({
+        from,
+        to,
+        subject: "New Website Enquiry — MS Sofa Repair & Furnishing",
+        html: emailHtml(payload, phone),
+        text,
+      });
 
-    if (!sendError) {
-      return { status: 200, json: { ok: true } };
+      if (!sendError) {
+        return { status: 200, json: { ok: true } };
+      }
+
+      console.error("Resend error:", sendError.message, "from=", from, "to=", to);
+    } catch (error) {
+      console.error("Resend exception:", error);
     }
-
-    console.error("Resend error:", sendError.message, "from=", JSON.stringify(from), "to=", to);
   }
 
-  const delivered = await sendViaFormSubmit(to, payload, phone);
+  const delivered = await sendViaFormSubmit(to, payload, phone, meta.origin);
   if (!delivered) {
     return {
       status: 502,
@@ -192,15 +216,20 @@ export async function handleEnquiry(
   return { status: 200, json: { ok: true } };
 }
 
-async function sendViaFormSubmit(to: string, payload: EnquiryPayload, phone: string) {
+async function sendViaFormSubmit(
+  to: string,
+  payload: EnquiryPayload,
+  phone: string,
+  origin = "https://ms-sofa-repair.vercel.app",
+) {
   try {
     const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Origin: "http://localhost:5173",
-        Referer: "http://localhost:5173/",
+        Origin: origin,
+        Referer: `${origin}/`,
       },
       body: JSON.stringify({
         _subject: "New Website Enquiry — MS Sofa Repair & Furnishing",

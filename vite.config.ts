@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { handleEnquiry } from "./api/_lib/enquiry.ts";
+import { handleEnquiry } from "./api/_lib/enquiry.js";
 
 function enquiryPlugin(): Plugin {
   return {

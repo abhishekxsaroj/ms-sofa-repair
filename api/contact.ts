@@ -1,4 +1,4 @@
-import { handleEnquiry } from "./_lib/enquiry";
+import { handleEnquiry } from "./_lib/enquiry.js";
 
 type VercelLikeRequest = {
   method?: string;
@@ -28,6 +28,12 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
     req.socket?.remoteAddress ||
     "unknown";
 
-  const result = await handleEnquiry(req.body, { ip });
+  const hostHeader = req.headers["x-forwarded-host"] || req.headers.host;
+  const host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader;
+  const protoHeader = req.headers["x-forwarded-proto"];
+  const proto = (Array.isArray(protoHeader) ? protoHeader[0] : protoHeader) || "https";
+  const origin = host ? `${proto}://${host}` : "https://ms-sofa-repair.vercel.app";
+
+  const result = await handleEnquiry(req.body, { ip, origin });
   res.status(result.status).json(result.json);
 }
