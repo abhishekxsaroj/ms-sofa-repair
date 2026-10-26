@@ -35,6 +35,7 @@ export function Hero() {
 
   useLayoutEffect(() => {
     if (!root.current) return;
+    const mm = gsap.matchMedia();
     const ctx = gsap.context(() => {
       if (!reduced) {
         gsap.from(".hero-line", {
@@ -50,40 +51,72 @@ export function Hero() {
 
       if (!cinematic) return;
 
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          start: 0,
-          end: () => window.innerHeight * (HERO_SCRUB_VH / 100),
-          scrub: 0.7,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            progress.current = self.progress;
+      mm.add("(max-width: 767px)", () => {
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: root.current,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.55,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              progress.current = self.progress;
+            },
           },
-        },
+        });
+
+        tl.to(
+          ".hero-content",
+          { opacity: 0, y: 20, pointerEvents: "none", ease: "none", duration: 0.22 },
+          0,
+        )
+          .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.28 }, 0.04)
+          .to(".hero-stage", { autoAlpha: 0, ease: "none", duration: 0.14 }, 0.86);
+
+        if (!use3d) {
+          tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.48 }, 0.3)
+            .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.48 }, 0.3)
+            .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.16 }, 0.7);
+        }
       });
 
-      tl.to(
-        ".hero-content",
-        { opacity: 0, y: 28, pointerEvents: "none", ease: "none", duration: 0.28 },
-        0,
-      )
-        .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.35 }, 0.06)
-        .to(".hero-stage", { autoAlpha: 0, ease: "none", duration: 0.12 }, 0.88);
+      mm.add("(min-width: 768px)", () => {
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            start: 0,
+            end: () => window.innerHeight * (HERO_SCRUB_VH / 100),
+            scrub: 0.7,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              progress.current = self.progress;
+            },
+          },
+        });
 
-      if (!use3d) {
-        tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.5 }, 0.38)
-          .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.5 }, 0.38)
-          .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.18 }, 0.72);
-      }
+        tl.to(
+          ".hero-content",
+          { opacity: 0, y: 28, pointerEvents: "none", ease: "none", duration: 0.28 },
+          0,
+        )
+          .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.35 }, 0.06)
+          .to(".hero-stage", { autoAlpha: 0, ease: "none", duration: 0.12 }, 0.88);
+
+        if (!use3d) {
+          tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.5 }, 0.38)
+            .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.5 }, 0.38)
+            .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.18 }, 0.72);
+        }
+      });
     }, root);
     return () => {
       progress.current = 0;
+      mm.revert();
       ctx.revert();
     };
   }, [reduced, cinematic, use3d]);
 
   const copy = (
-    <div className="hero-content pointer-events-auto relative z-20 mx-auto flex h-full w-full max-w-6xl flex-col justify-center px-6 pt-24 pb-10 md:px-10 lg:px-12">
+    <div className="hero-content pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-6xl flex-col justify-center px-6 pt-24 pb-10 md:px-10 lg:px-12">
       <p className="hero-kicker text-[0.68rem] uppercase tracking-[0.28em] text-bronze md:text-xs">
         {business.values.join(" · ")}
       </p>
@@ -103,7 +136,7 @@ export function Hero() {
         <p className="mt-3 text-xs tracking-wide text-ivory/65 md:text-sm">
           Repair, restoration, and made-to-order furniture in Greater Noida West.
         </p>
-        <div className="mt-7 flex flex-wrap gap-3">
+        <div className="pointer-events-auto mt-7 flex flex-wrap gap-3">
           <Button variant="light" onClick={() => goToEnquiry()}>
             Request a Quote
           </Button>
@@ -138,9 +171,9 @@ export function Hero() {
     <section
       id="home"
       ref={root}
-      className="pointer-events-none fixed inset-x-0 top-0 z-30 h-svh"
+      className="pointer-events-none relative z-30 h-[280vh] bg-ink md:fixed md:inset-x-0 md:top-0 md:h-svh md:bg-transparent"
     >
-      <div className="hero-stage h-full overflow-hidden text-ivory">
+      <div className="hero-stage sticky top-0 h-svh overflow-hidden text-ivory md:relative md:h-full">
         <div className="hero-frame absolute inset-0">
           {use3d ? (
             <div className="hero-scene pointer-events-none absolute inset-0">

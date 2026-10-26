@@ -549,7 +549,8 @@ export function HeroScene({ reduced, progress, onReady }: HeroSceneProps) {
       performance={{ min: 0.5 }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
-        gl.domElement.style.touchAction = "none";
+        gl.domElement.style.pointerEvents = "none";
+        gl.domElement.style.touchAction = "pan-y";
         onReady?.();
       }}
     >

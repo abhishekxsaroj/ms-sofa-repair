@@ -62,7 +62,7 @@ export function Transformation() {
       ScrollTrigger.create({
         trigger: root.current,
         start: "top top",
-        end: `+=${HERO_SCRUB_VH + TRANSFORM_MOBILE_SCRUB_VH}%`,
+        end: `+=${TRANSFORM_MOBILE_SCRUB_VH}%`,
         pin: true,
         scrub: true,
         invalidateOnRefresh: true,

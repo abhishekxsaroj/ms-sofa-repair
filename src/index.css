@@ -225,6 +225,8 @@ body {
 .hero-scene canvas {
   width: 100%;
   height: 100%;
+  pointer-events: none;
+  touch-action: pan-y;
 }
 
 .hero-scene canvas {
