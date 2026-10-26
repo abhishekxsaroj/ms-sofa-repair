@@ -59,10 +59,11 @@ export function Transformation() {
     });
 
     mm.add("(max-width: 767px)", () => {
+      // Keep the next section pinned under the fixed hero so curtains open onto real content.
       ScrollTrigger.create({
         trigger: root.current,
         start: "top top",
-        end: `+=${TRANSFORM_MOBILE_SCRUB_VH}%`,
+        end: `+=${HERO_SCRUB_VH + TRANSFORM_MOBILE_SCRUB_VH}%`,
         pin: true,
         scrub: true,
         invalidateOnRefresh: true,
@@ -119,7 +120,7 @@ export function Transformation() {
               Repair it — or make it&nbsp;new.
             </h2>
           </div>
-          <div className="transform-copy mt-6 md:opacity-0">
+          <div className="transform-copy mt-6 opacity-100 md:opacity-0">
             <p className="leading-relaxed text-ivory/70">
               Worn fabric and tired frames do not have to mean the end of a favourite piece —
               we repair and restore so it can stay. If you need something new, we also build

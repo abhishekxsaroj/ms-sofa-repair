@@ -51,41 +51,12 @@ export function Hero() {
 
       if (!cinematic) return;
 
-      mm.add("(max-width: 767px)", () => {
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: root.current,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: 0.55,
-            invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              progress.current = self.progress;
-            },
-          },
-        });
-
-        tl.to(
-          ".hero-content",
-          { opacity: 0, y: 20, pointerEvents: "none", ease: "none", duration: 0.22 },
-          0,
-        )
-          .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.28 }, 0.04)
-          .to(".hero-stage", { autoAlpha: 0, ease: "none", duration: 0.14 }, 0.86);
-
-        if (!use3d) {
-          tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.48 }, 0.3)
-            .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.48 }, 0.3)
-            .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.16 }, 0.7);
-        }
-      });
-
-      mm.add("(min-width: 768px)", () => {
+      const buildTimeline = (scrub: number, endVh: number) => {
         const tl = gsap.timeline({
           scrollTrigger: {
             start: 0,
-            end: () => window.innerHeight * (HERO_SCRUB_VH / 100),
-            scrub: 0.7,
+            end: () => window.innerHeight * (endVh / 100),
+            scrub,
             invalidateOnRefresh: true,
             onUpdate: (self) => {
               progress.current = self.progress;
@@ -95,19 +66,28 @@ export function Hero() {
 
         tl.to(
           ".hero-content",
-          { opacity: 0, y: 28, pointerEvents: "none", ease: "none", duration: 0.28 },
+          { opacity: 0, y: 24, pointerEvents: "none", ease: "none", duration: 0.26 },
           0,
         )
-          .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.35 }, 0.06)
+          .to(".hero-veil", { opacity: 0, ease: "none", duration: 0.3 }, 0.05)
           .to(".hero-stage", { autoAlpha: 0, ease: "none", duration: 0.12 }, 0.88);
 
         if (!use3d) {
-          tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.5 }, 0.38)
-            .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.5 }, 0.38)
-            .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.18 }, 0.72);
+          tl.to(".curtain-left", { xPercent: -102, ease: "none", duration: 0.5 }, 0.34)
+            .to(".curtain-right", { xPercent: 102, ease: "none", duration: 0.5 }, 0.34)
+            .to(".hero-css-curtain", { opacity: 0, ease: "none", duration: 0.16 }, 0.72);
         }
+      };
+
+      mm.add("(max-width: 767px)", () => {
+        buildTimeline(0.45, HERO_SCRUB_VH);
+      });
+
+      mm.add("(min-width: 768px)", () => {
+        buildTimeline(0.7, HERO_SCRUB_VH);
       });
     }, root);
+
     return () => {
       progress.current = 0;
       mm.revert();
@@ -171,9 +151,9 @@ export function Hero() {
     <section
       id="home"
       ref={root}
-      className="pointer-events-none relative z-30 h-[280vh] bg-ink md:fixed md:inset-x-0 md:top-0 md:h-svh md:bg-transparent"
+      className="pointer-events-none fixed inset-x-0 top-0 z-30 h-svh"
     >
-      <div className="hero-stage sticky top-0 h-svh overflow-hidden text-ivory md:relative md:h-full">
+      <div className="hero-stage h-full overflow-hidden text-ivory">
         <div className="hero-frame absolute inset-0">
           {use3d ? (
             <div className="hero-scene pointer-events-none absolute inset-0">
