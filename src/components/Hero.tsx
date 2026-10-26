@@ -2,7 +2,7 @@ import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { business } from "../lib/business";
-import { HERO_SCRUB_VH } from "../lib/scroll";
+import { HERO_MOBILE_SCRUB_VH, HERO_SCRUB_VH } from "../lib/scroll";
 import { useEnquiry } from "../context/EnquiryContext";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { Button } from "./Button";
@@ -80,7 +80,7 @@ export function Hero() {
       };
 
       mm.add("(max-width: 767px)", () => {
-        buildTimeline(0.45, HERO_SCRUB_VH);
+        buildTimeline(0.35, HERO_MOBILE_SCRUB_VH);
       });
 
       mm.add("(min-width: 768px)", () => {

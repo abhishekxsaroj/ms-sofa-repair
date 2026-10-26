@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { HERO_SCRUB_VH, TRANSFORM_MOBILE_SCRUB_VH, TRANSFORM_SCRUB_VH } from "../lib/scroll";
+import { HERO_MOBILE_SCRUB_VH, HERO_SCRUB_VH, TRANSFORM_SCRUB_VH } from "../lib/scroll";
 import { useEnquiry } from "../context/EnquiryContext";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { BeforeAfter } from "./BeforeAfter";
@@ -59,11 +59,11 @@ export function Transformation() {
     });
 
     mm.add("(max-width: 767px)", () => {
-      // Keep the next section pinned under the fixed hero so curtains open onto real content.
+      // Pin only while curtains open — no extra empty scroll after the reveal.
       ScrollTrigger.create({
         trigger: root.current,
         start: "top top",
-        end: `+=${HERO_SCRUB_VH + TRANSFORM_MOBILE_SCRUB_VH}%`,
+        end: `+=${HERO_MOBILE_SCRUB_VH}%`,
         pin: true,
         scrub: true,
         invalidateOnRefresh: true,
