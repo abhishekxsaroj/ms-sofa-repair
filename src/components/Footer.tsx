@@ -24,9 +24,12 @@ export function Footer() {
           ))}
         </div>
       </div>
-      <div className="mx-auto mt-14 grid max-w-7xl gap-3 px-5 text-xs text-ivory/40 md:grid-cols-3 md:items-center md:px-8">
-        <p>© {new Date().getFullYear()} {business.name}</p>
-        <p className="text-center">
+      <div className="mx-auto mt-14 flex max-w-7xl flex-col gap-3 px-5 text-xs text-ivory/40 md:grid md:grid-cols-3 md:items-center md:px-8">
+        <p className="order-1">© {new Date().getFullYear()} {business.name}</p>
+        <p className="order-2 md:order-3 md:text-right">
+          Greater Noida West · Repair, furnishing &amp; custom furniture
+        </p>
+        <p className="order-3 text-center md:order-2">
           Design &amp; developed by{" "}
           <a
             href="https://abhishek-portfolio-pink-two.vercel.app/"
@@ -37,7 +40,6 @@ export function Footer() {
             Abhishek
           </a>
         </p>
-        <p className="md:text-right">Greater Noida West · Repair, furnishing &amp; custom furniture</p>
       </div>
     </footer>
   );

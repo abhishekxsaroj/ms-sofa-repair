@@ -167,7 +167,7 @@ export async function handleEnquiry(
   if (error) return { status: 400, json: { ok: false, error } };
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL || "info.abhisheksaroj@gmail.com";
+  const to = process.env.CONTACT_EMAIL || "mssofarepair9@gmail.com";
   const fromRaw = process.env.CONTACT_FROM_EMAIL || "onboarding@resend.dev";
   const from = fromRaw.includes("example.com") ? "onboarding@resend.dev" : fromRaw;
   const phone = normalizeIndianPhone(payload.phone) as string;
