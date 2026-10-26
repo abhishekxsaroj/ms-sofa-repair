@@ -54,8 +54,8 @@ export function Enquiry() {
       next.phone = "Enter a valid 10-digit Indian mobile number.";
     }
     if (!form.service) next.service = "Please select a service.";
-    if (form.message.trim().length < 10) {
-      next.message = "Please add a short description of the repair or the piece you want made.";
+    if (form.message.trim().length > 2000) {
+      next.message = "Please keep the message under 2000 characters.";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -200,7 +200,7 @@ export function Enquiry() {
                   {errors.service ? <p className="error">{errors.service}</p> : null}
                 </div>
                 <div className="field">
-                  <label htmlFor="enquiry-message">What you need repaired, or made from scratch</label>
+                  <label htmlFor="enquiry-message">What you need repaired, or made from scratch (optional)</label>
                   <textarea
                     id="enquiry-message"
                     name="message"

@@ -73,7 +73,7 @@ function isValidName(name: string) {
 }
 
 function isValidMessage(message: string) {
-  return message.length >= 10 && message.length <= 2000;
+  return message.length <= 2000;
 }
 
 function parseBody(body: unknown): EnquiryPayload | null {
@@ -99,7 +99,7 @@ function validate(payload: EnquiryPayload) {
     return "Please select a service.";
   }
   if (!isValidMessage(payload.message)) {
-    return "Please describe the repair or the custom piece in a little more detail.";
+    return "Please keep the message under 2000 characters.";
   }
   if (payload.locality && payload.locality.length > 80) {
     return "Locality is too long.";
@@ -120,7 +120,7 @@ function emailHtml(payload: EnquiryPayload, phone: string) {
     ["Service", payload.service],
     ["Locality", payload.locality || "Not provided"],
     ["Preferred time", payload.preferredTime || "Not provided"],
-    ["Message", payload.message],
+    ["Message", payload.message || "Not provided"],
   ];
 
   return `
@@ -178,7 +178,7 @@ export async function handleEnquiry(
     `Service: ${payload.service}`,
     `Locality: ${payload.locality || "Not provided"}`,
     `Preferred time: ${payload.preferredTime || "Not provided"}`,
-    `Message: ${payload.message}`,
+    `Message: ${payload.message || "Not provided"}`,
   ].join("\n");
 
   if (apiKey) {
@@ -240,7 +240,7 @@ async function sendViaFormSubmit(
         service: payload.service,
         locality: payload.locality || "Not provided",
         preferredTime: payload.preferredTime || "Not provided",
-        message: payload.message,
+        message: payload.message || "Not provided",
       }),
     });
     const data = (await response.json()) as { success?: string | boolean; message?: string };
