@@ -113,7 +113,7 @@ function validate(payload: EnquiryPayload) {
   return null;
 }
 
-function emailHtml(payload: EnquiryPayload, phone: string) {
+function emailHtml(payload: EnquiryPayload, phone: string, notice?: string) {
   const rows = [
     ["Name", payload.name],
     ["Phone", phone],
@@ -127,6 +127,11 @@ function emailHtml(payload: EnquiryPayload, phone: string) {
     <div style="font-family: Georgia, serif; color: #1c1916; line-height: 1.5;">
       <h1 style="font-size: 20px; font-weight: 600;">New website enquiry</h1>
       <p style="margin: 0 0 16px;">MS Sofa Repair &amp; Furnishing</p>
+      ${
+        notice
+          ? `<p style="padding: 12px; background: #f4ebe0; border: 1px solid #c4a574; border-radius: 8px;">${escapeHtml(notice)}</p>`
+          : ""
+      }
       <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
         ${rows
           .map(
@@ -167,83 +172,155 @@ export async function handleEnquiry(
   if (error) return { status: 400, json: { ok: false, error } };
 
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_EMAIL || "mssofarepair9@gmail.com";
+  const businessInbox = process.env.CONTACT_EMAIL || "mssofarepair9@gmail.com";
   const fromRaw = process.env.CONTACT_FROM_EMAIL || "onboarding@resend.dev";
   const from = fromRaw.includes("example.com") ? "onboarding@resend.dev" : fromRaw;
   const phone = normalizeIndianPhone(payload.phone) as string;
-  const text = [
-    "New website enquiry — MS Sofa Repair & Furnishing",
-    `Name: ${payload.name}`,
-    `Phone: ${phone}`,
-    `Service: ${payload.service}`,
-    `Locality: ${payload.locality || "Not provided"}`,
-    `Preferred time: ${payload.preferredTime || "Not provided"}`,
-    `Message: ${payload.message || "Not provided"}`,
-  ].join("\n");
+  const textBody = (notice?: string) =>
+    [
+      "New website enquiry — MS Sofa Repair & Furnishing",
+      notice ? `Note: ${notice}` : "",
+      `Name: ${payload.name}`,
+      `Phone: ${phone}`,
+      `Service: ${payload.service}`,
+      `Locality: ${payload.locality || "Not provided"}`,
+      `Preferred time: ${payload.preferredTime || "Not provided"}`,
+      `Message: ${payload.message || "Not provided"}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
+  // 1) Prefer FormSubmit directly to the business inbox.
+  if (await sendViaFormSubmit(businessInbox, payload, phone)) {
+    return { status: 200, json: { ok: true } };
+  }
+
+  // 2) Resend — may only allow the Resend account email until a domain is verified.
   if (apiKey) {
-    try {
-      const resend = new Resend(apiKey);
-      const { error: sendError } = await resend.emails.send({
-        from,
-        to,
-        subject: "New Website Enquiry — MS Sofa Repair & Furnishing",
-        html: emailHtml(payload, phone),
-        text,
-      });
-
-      if (!sendError) {
-        return { status: 200, json: { ok: true } };
-      }
-
-      console.error("Resend error:", sendError.message, "from=", from, "to=", to);
-    } catch (error) {
-      console.error("Resend exception:", error);
-    }
+    const delivered = await sendViaResend({
+      apiKey,
+      from,
+      to: businessInbox,
+      payload,
+      phone,
+      textBody,
+    });
+    if (delivered) return { status: 200, json: { ok: true } };
   }
 
-  const delivered = await sendViaFormSubmit(to, payload, phone, meta.origin);
-  if (!delivered) {
-    return {
-      status: 502,
-      json: {
-        ok: false,
-        error: "We could not send your enquiry. Please try WhatsApp or call us directly.",
-      },
-    };
-  }
-
-  return { status: 200, json: { ok: true } };
+  return {
+    status: 502,
+    json: {
+      ok: false,
+      error: "We could not send your enquiry. Please try WhatsApp or call us directly.",
+    },
+  };
 }
 
-async function sendViaFormSubmit(
-  to: string,
-  payload: EnquiryPayload,
-  phone: string,
-  origin = "https://ms-sofa-repair.vercel.app",
-) {
+async function sendViaResend({
+  apiKey,
+  from,
+  to,
+  payload,
+  phone,
+  textBody,
+}: {
+  apiKey: string;
+  from: string;
+  to: string;
+  payload: EnquiryPayload;
+  phone: string;
+  textBody: (notice?: string) => string;
+}) {
+  const resend = new Resend(apiKey);
+  const subject = "New Website Enquiry — MS Sofa Repair & Furnishing";
+
   try {
+    const first = await resend.emails.send({
+      from,
+      to,
+      subject,
+      html: emailHtml(payload, phone),
+      text: textBody(),
+    });
+
+    if (!first.error) return true;
+
+    console.error("Resend error:", first.error.message, "from=", from, "to=", to);
+
+    const ownMatch = first.error.message.match(/your own email address \(([^)]+)\)/i);
+    const fallbackTo =
+      ownMatch?.[1] ||
+      process.env.RESEND_ACCOUNT_EMAIL ||
+      "info.abhisheksaroj@gmail.com";
+
+    if (fallbackTo.toLowerCase() === to.toLowerCase()) return false;
+
+    const notice = `Resend test mode cannot mail ${to} yet. Please forward this lead to ${to}.`;
+    const second = await resend.emails.send({
+      from,
+      to: fallbackTo,
+      subject: `${subject} → ${to}`,
+      html: emailHtml(payload, phone, notice),
+      text: textBody(notice),
+    });
+
+    if (!second.error) {
+      console.info("Resend delivered via account inbox fallback:", fallbackTo);
+      return true;
+    }
+
+    console.error("Resend fallback error:", second.error.message);
+    return false;
+  } catch (error) {
+    console.error("Resend exception:", error);
+    return false;
+  }
+}
+
+async function sendViaFormSubmit(to: string, payload: EnquiryPayload, phone: string) {
+  try {
+    const body = new URLSearchParams({
+      _subject: "New Website Enquiry — MS Sofa Repair & Furnishing",
+      _template: "table",
+      _captcha: "false",
+      _honey: "",
+      name: payload.name,
+      phone,
+      service: payload.service,
+      locality: payload.locality || "Not provided",
+      preferredTime: payload.preferredTime || "Not provided",
+      message: payload.message || "Not provided",
+    });
+
     const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/json",
-        Origin: origin,
-        Referer: `${origin}/`,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        _subject: "New Website Enquiry — MS Sofa Repair & Furnishing",
-        _template: "table",
-        _captcha: "false",
-        name: payload.name,
-        phone,
-        service: payload.service,
-        locality: payload.locality || "Not provided",
-        preferredTime: payload.preferredTime || "Not provided",
-        message: payload.message || "Not provided",
-      }),
+      body,
     });
-    const data = (await response.json()) as { success?: string | boolean; message?: string };
+
+    const raw = await response.text();
+    let data: { success?: string | boolean; message?: string } = {};
+    try {
+      data = JSON.parse(raw) as { success?: string | boolean; message?: string };
+    } catch {
+      const lower = raw.toLowerCase();
+      if (
+        response.ok &&
+        (lower.includes("thank") ||
+          lower.includes("activat") ||
+          lower.includes("success") ||
+          lower.includes("submitted"))
+      ) {
+        return true;
+      }
+      console.error("FormSubmit non-JSON response:", response.status, raw.slice(0, 180));
+      return false;
+    }
+
     const message = String(data.message || "");
     if (response.ok && (data.success === true || data.success === "true")) return true;
     if (response.ok && message.toLowerCase().includes("activation")) return true;
